@@ -5,7 +5,11 @@
 #include <cstring>
 #include "macho.h"
 
-MachO::MachO(const std::string &filename) {
+constexpr const uint32_t MH_MAGIC_64 = 0xFEEDFACF;
+constexpr const uint32_t MH_CIGAM_64 = 0xCFFAEDFE;
+
+
+MachO::MachO(const std::string &filename) : header{} {
     std::ifstream f;
     f.open(filename, std::ifstream::in | std::ifstream::binary);
     if (f.fail()) {
@@ -13,6 +17,10 @@ MachO::MachO(const std::string &filename) {
     }
 
     auto magic = Read::readBytes<uint32_t>(f);
+
+    if (magic != MH_MAGIC_64 && magic != MH_CIGAM_64) {
+        throw NotAMachOFileException{magic};
+    }
 
     f.read(reinterpret_cast<char *>(&header), sizeof(header));
 
@@ -80,4 +88,12 @@ std::shared_ptr<CodeSignatureLoadCommand> MachO::getCodeSignatureLoadCommand() {
         return std::static_pointer_cast<CodeSignatureLoadCommand>(lc);
     }
     return std::shared_ptr<CodeSignatureLoadCommand>{};
+}
+
+bool MachO::requiresSignature() {
+    return (
+            header.filetype == MH_EXECUTE || header.filetype == MH_DYLIB ||
+            header.filetype == MH_DYLINKER || header.filetype == MH_BUNDLE ||
+            header.filetype == MH_KEXT_BUNDLE || header.filetype == MH_PRELOAD
+    );
 }

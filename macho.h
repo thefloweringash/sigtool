@@ -9,6 +9,15 @@
 #include <iostream>
 #include "emit.h"
 
+enum {
+    MH_EXECUTE = 0x2,
+    MH_PRELOAD = 0x5,
+    MH_DYLIB = 0x6,
+    MH_DYLINKER = 0x7,
+    MH_BUNDLE = 0x8,
+    MH_KEXT_BUNDLE = 0xb,
+};
+
 enum LCType {
     LC_CODE_SIGNATURE = 0x1d,
     LC_SEGMENT_64 = 0x19,
@@ -61,9 +70,15 @@ struct MachO {
     std::shared_ptr<Segment64LoadCommand> getSegment64LoadCommand(const std::string& name);
     std::shared_ptr<CodeSignatureLoadCommand> getCodeSignatureLoadCommand();
 
+    bool requiresSignature();
+
 private:
     std::vector<std::shared_ptr<LoadCommand>> loadCommands;
 };
 
+struct NotAMachOFileException : public std::exception {
+    uint32_t magic;
+    explicit NotAMachOFileException(uint32_t magic) : magic{magic} {}
+};
 
 #endif //GENSIG_MACHO_H

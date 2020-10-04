@@ -26,13 +26,13 @@ int main(int argc, char **argv) {
     CLI::App app{"gensig"};
     app.require_subcommand();
 
-    bool executable;
-    app.add_flag("--executable", executable, "Flag as main executable (not a library)");
-
     std::string file, identifier;
     app.add_option("-f,--file", file, "Mach-O target file")
             ->required();
     app.add_option("-i,--identifier", identifier, "File identifier");
+
+    app.add_subcommand("check-requires-signature",
+                       "Determine if this is a macho file that must be signed");
 
     app.add_subcommand("size", "Determine size of embedded signature");
     app.add_subcommand("generate", "Generate an embedded signature and emit on stdout");
@@ -42,6 +42,15 @@ int main(int argc, char **argv) {
 
     CLI11_PARSE(app, argc, argv);
 
+    if (app.got_subcommand("check-requires-signature")) {
+        try {
+            MachO test{file};
+            return test.requiresSignature() ? 0 : 1;
+        } catch (NotAMachOFileException& e) {
+            return 1;
+        }
+    }
+
     SuperBlob sb {};
 
     // blob 1: code directory
@@ -50,11 +59,14 @@ int main(int argc, char **argv) {
     codeDirectory->identifier = identifier.empty() ? file : identifier;
     codeDirectory->setPageSize(pageSize);
 
-    if (executable) {
+
+    MachO target{file};
+
+    // TOOD: is this sane?
+    if (target.header.filetype == MH_EXECUTE) {
         codeDirectory->data.execSegFlags |= CS_EXECSEG_MAIN_BINARY;
     }
 
-    MachO target{file};
     auto textSegment = target.getSegment64LoadCommand("__TEXT");
     if (textSegment) {
         codeDirectory->data.execSegBase = textSegment->data.fileoff;
@@ -148,7 +160,7 @@ int main(int argc, char **argv) {
         machoFileWrite.seekp(codeSignature->data.dataOff);
         sb.emit(machoFileWrite);
         machoFileWrite.close();
-     }
+    }
 
     return 0;
 }
