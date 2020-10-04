@@ -114,10 +114,9 @@ void SuperBlob::emit(std::ostream& os)  {
 
     // blob index
     for (const auto& blob : blobs) {
-        size_t blobLen = blob->length();
         EmitBE::writeUInt32(os, blob->slotType());
         EmitBE::writeUInt32(os, blobDataOffset);
-        blobDataOffset += blobLen;
+        blobDataOffset += blob->length();
     }
 
     for (const auto& blob : blobs) {
@@ -127,7 +126,9 @@ void SuperBlob::emit(std::ostream& os)  {
 }
 
 size_t SuperBlob::length() {
-    size_t length = SuperBlob::headerSize;
+    size_t length =
+            SuperBlob::headerSize +
+            2 * sizeof(uint32_t) * blobs.size();
     for (const auto& blob : blobs) {
         length += blob->length();
     }

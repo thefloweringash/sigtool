@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 
     app.add_subcommand("size", "Determine size of embedded signature");
     app.add_subcommand("generate", "Generate an embedded signature and emit on stdout");
-    // app.add_subcommand("inject", "Generate and inject embedded signature");
+    app.add_subcommand("inject", "Generate and inject embedded signature");
 
     app.require_subcommand();
 
@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
     machoFileRaw.open(file, std::ifstream::in | std::ifstream::binary);
 
     if (machoFileRaw.fail()) {
-        throw std::runtime_error(std::string{"opening mach file: "} + strerror(errno));
+        throw std::runtime_error(std::string{"opening macho file: "} + strerror(errno));
     }
 
     unsigned int totalPages = (limit + (pageSize - 1)) / pageSize;
@@ -107,6 +107,8 @@ int main(int argc, char **argv) {
         codeDirectory->addCodeHash(pageHash);
     }
 
+    machoFileRaw.close();
+
     sb.blobs.push_back(codeDirectory);
 
     // blob 2: requirements index with 0 entries
@@ -123,7 +125,30 @@ int main(int argc, char **argv) {
         std::cout << sb.length() << std::endl;
     } else if (app.got_subcommand("generate")) {
         sb.emit(std::cout);
-    }
+    } else if (app.got_subcommand("inject")) {
+        if (!codeSignature) {
+            throw std::runtime_error{"cannot inject signature without appropriate load command"};
+        }
+
+        if (sb.length() > codeSignature->data.dataSize) {
+            throw std::runtime_error{
+                std::string{"allocated size too small: need "}
+                + std::to_string(sb.length())
+                + std::string{"but have "}
+                + std::to_string(codeSignature->data.dataSize)
+            };
+        }
+
+        std::ofstream machoFileWrite;
+        machoFileWrite.open(file, std::ofstream::in | std::ofstream::out | std::ofstream::binary);
+        if (machoFileWrite.fail()) {
+            throw std::runtime_error(std::string{"opening macho file: "} + strerror(errno));
+         }
+
+        machoFileWrite.seekp(codeSignature->data.dataOff);
+        sb.emit(machoFileWrite);
+        machoFileWrite.close();
+     }
 
     return 0;
 }
