@@ -12,7 +12,7 @@
 #include <arpa/inet.h>
 #include <cmath>
 
-static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
+static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "host is little endian");
 
 class Emit {
 
@@ -29,7 +29,17 @@ public:
     }
 
     static std::ostream& writeUInt64(std::ostream& os, uint64_t value) {
-        return EmitBE::writeBytes<uint64_t >(os, __bswap_constant_64(value));
+        uint64_t swapped =
+                ((UINT64_C(0xff00000000000000) & value) >> 56) |
+                ((UINT64_C(0x00ff000000000000) & value) >> 40) |
+                ((UINT64_C(0x0000ff0000000000) & value) >> 24) |
+                ((UINT64_C(0x000000ff00000000) & value) >> 8) |
+                ((UINT64_C(0x00000000ff000000) & value) << 8) |
+                ((UINT64_C(0x0000000000ff0000) & value) << 24) |
+                ((UINT64_C(0x000000000000ff00) & value) << 40) |
+                ((UINT64_C(0x00000000000000ff) & value) << 56);
+
+        return EmitBE::writeBytes<uint64_t >(os, swapped);
     }
 };
 
