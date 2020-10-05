@@ -37,6 +37,7 @@ int main(int argc, char **argv) {
     app.add_subcommand("size", "Determine size of embedded signature");
     app.add_subcommand("generate", "Generate an embedded signature and emit on stdout");
     app.add_subcommand("inject", "Generate and inject embedded signature");
+    app.add_subcommand("show-arch", "Show architecture");
 
     app.require_subcommand();
 
@@ -49,6 +50,27 @@ int main(int argc, char **argv) {
         } catch (NotAMachOFileException& e) {
             return 1;
         }
+    }
+
+    if (app.got_subcommand("show-arch")) {
+        MachO test{file};
+
+        std::string type;
+        switch (test.header.cpuType) {
+            case CPUTYPE_X86_64:
+                type = "x86_64";
+                break;
+            case CPUTYPE_ARM64:
+                type = "arm64";
+                break;
+            default:
+                std::cerr << "Unsupported cpu type" << std::endl;
+                return 1;
+        }
+
+        std::cout << type << std::endl;
+
+        return 0;
     }
 
     SuperBlob sb {};

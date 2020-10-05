@@ -18,6 +18,15 @@ enum {
     MH_KEXT_BUNDLE = 0xb,
 };
 
+enum {
+    CPUTYPE_I386 = 0x7,
+    CPUTYPE_ARM = 0xc,
+    CPUTYPE_64_BIT = 0x1000000,
+
+    CPUTYPE_X86_64 = CPUTYPE_I386 | CPUTYPE_64_BIT,
+    CPUTYPE_ARM64 = CPUTYPE_ARM | CPUTYPE_64_BIT,
+};
+
 enum LCType {
     LC_CODE_SIGNATURE = 0x1d,
     LC_SEGMENT_64 = 0x19,
