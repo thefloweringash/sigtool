@@ -95,8 +95,8 @@ int main(int argc, char **argv) {
         codeDirectory->data.execSegLimit = textSegment->data.filesize;
     }
 
-    struct stat64 targetFileStat {};
-    stat64(file.c_str(), &targetFileStat);
+    struct stat targetFileStat {};
+    stat(file.c_str(), &targetFileStat);
 
     size_t limit = targetFileStat.st_size;
 
