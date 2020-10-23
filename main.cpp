@@ -1,5 +1,7 @@
 #include <iostream>
 #include <memory>
+#include "magic_numbers.h"
+#include "hash.h"
 #include "signature.h"
 #include "macho.h"
 
@@ -7,18 +9,7 @@
 #include <CLI/Formatter.hpp>
 #include <CLI/Config.hpp>
 
-#include <cryptopp/sha.h>
 #include <sstream>
-
-static Hash hashString(const std::string& str) {
-    Hash result {};
-
-    CryptoPP::SHA256 foo;
-    foo.Update(reinterpret_cast<const CryptoPP::byte *>(str.data()), str.length());
-    foo.Final(reinterpret_cast<CryptoPP::byte *>(&result.bytes[0]));
-
-    return result;
-}
 
 constexpr const unsigned int pageSize = 4096;
 
@@ -122,7 +113,7 @@ int main(int argc, char **argv) {
         off_t thisPageSize = pageSize;
 
         if (thisPageStart + thisPageSize > limit) {
-            thisPageSize -= (thisPageStart + thisPageSize) - limit;
+            thisPageSize = limit - thisPageStart;
         }
 
         machoFileRaw.read(&pageBytes[0], thisPageSize);
@@ -132,12 +123,7 @@ int main(int argc, char **argv) {
             + std::to_string(thisPageSize) + " actual_bytes" + std::to_string(machoFileRaw.gcount()));
         }
 
-        Hash pageHash {};
-
-        CryptoPP::SHA256 pageHasher;
-        pageHasher.Update(reinterpret_cast<const CryptoPP::byte *>(&pageBytes[0]), thisPageSize);
-        pageHasher.Final(reinterpret_cast<CryptoPP::byte *>(&pageHash.bytes[0]));
-
+        Hash pageHash { &pageBytes[0], pageSize };
         codeDirectory->addCodeHash(pageHash);
     }
 
@@ -149,7 +135,8 @@ int main(int argc, char **argv) {
     auto requirements = std::make_shared<Requirements>();
     std::basic_ostringstream<char> requirementsBuf;
     requirements->emit(requirementsBuf);
-    codeDirectory->setSpecialHash(2, hashString(requirementsBuf.str()));
+    Hash requirementsHash { requirementsBuf.str() };
+    codeDirectory->setSpecialHash(2, requirementsHash);
     sb.blobs.push_back(requirements);
 
     // blob 3: empty signature slot

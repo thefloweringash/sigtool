@@ -10,13 +10,13 @@ ENDIF()
 # find_package(CLI11 CONFIG REQUIRED)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(CRYPTOPP REQUIRED IMPORTED_TARGET libcryptopp)
+pkg_check_modules(OPENSSL REQUIRED IMPORTED_TARGET openssl)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(gensig main.cpp macho.cpp signature.cpp)
+add_executable(gensig main.cpp macho.cpp signature.cpp hash.cpp)
 target_link_libraries(gensig
         PRIVATE
-        PkgConfig::CRYPTOPP
+        PkgConfig::OPENSSL
         #CLI11:CLI11
         )

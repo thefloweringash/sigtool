@@ -16,8 +16,8 @@ CodeDirectory::CodeDirectory() noexcept {
     data.magic = CSMAGIC_CODEDIRECTORY;
     data.version = 0x020400;
     data.flags = CS_ADHOC;
-    data.hashSize = 32;
-    data.hashType = CS_HASHTYPE_SHA256;
+    data.hashSize = Hash::hashSize;
+    data.hashType = Hash::hashType;
 }
 
 size_t CodeDirectory::length() {
