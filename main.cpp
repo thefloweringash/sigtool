@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
         char pageBytes[pageSize];
 
         off_t thisPageStart = page * pageSize;
-        off_t thisPageSize = pageSize;
+        size_t thisPageSize = pageSize;
 
         if (thisPageStart + thisPageSize > limit) {
             thisPageSize = limit - thisPageStart;
@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
             + std::to_string(thisPageSize) + " actual_bytes" + std::to_string(machoFileRaw.gcount()));
         }
 
-        Hash pageHash { &pageBytes[0], pageSize };
+        Hash pageHash { &pageBytes[0], thisPageSize };
         codeDirectory->addCodeHash(pageHash);
     }
 
