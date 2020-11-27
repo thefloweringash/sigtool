@@ -20,3 +20,5 @@ target_link_libraries(gensig
         PkgConfig::OPENSSL
         #CLI11:CLI11
         )
+
+install(TARGETS gensig)
