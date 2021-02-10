@@ -5,9 +5,7 @@
 #include "signature.h"
 #include "macho.h"
 
-#include <CLI/App.hpp>
-#include <CLI/Formatter.hpp>
-#include <CLI/Config.hpp>
+#include <CLI11.hpp>
 
 #include <sstream>
 
