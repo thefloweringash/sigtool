@@ -1,5 +1,5 @@
-#ifndef GENSIG_SIGNATURE_H
-#define GENSIG_SIGNATURE_H
+#ifndef SIGTOOL_SIGNATURE_H
+#define SIGTOOL_SIGNATURE_H
 
 #include <iostream>
 #include <vector>
@@ -93,4 +93,4 @@ struct Signature : public Blob {
     size_t length() override;
 };
 
-#endif //GENSIG_SIGNATURE_H
+#endif //SIGTOOL_SIGNATURE_H

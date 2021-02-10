@@ -1,10 +1,5 @@
-//
-// Created by lorne on 10/4/20.
-//
-
-#ifndef GENSIG_EMIT_H
-#define GENSIG_EMIT_H
-
+#ifndef SIGTOOL_EMIT_H
+#define SIGTOOL_EMIT_H
 
 #include <iostream>
 #include <vector>
@@ -68,4 +63,4 @@ public:
 };
 
 
-#endif //GENSIG_EMIT_H
+#endif //SIGTOOL_EMIT_H

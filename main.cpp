@@ -14,7 +14,7 @@
 constexpr const unsigned int pageSize = 4096;
 
 int main(int argc, char **argv) {
-    CLI::App app{"gensig"};
+    CLI::App app{"sigtool"};
     app.require_subcommand();
 
     std::string file, identifier;

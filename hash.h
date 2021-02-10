@@ -1,5 +1,5 @@
-#ifndef GENSIG_HASH_H
-#define GENSIG_HASH_H
+#ifndef SIGTOOL_HASH_H
+#define SIGTOOL_HASH_H
 
 #include <cstddef>
 #include <string>

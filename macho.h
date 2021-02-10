@@ -1,5 +1,5 @@
-#ifndef GENSIG_MACHO_H
-#define GENSIG_MACHO_H
+#ifndef SIGTOOL_MACHO_H
+#define SIGTOOL_MACHO_H
 
 #include <string>
 #include <vector>
@@ -90,4 +90,4 @@ struct NotAMachOFileException : public std::exception {
     explicit NotAMachOFileException(uint32_t magic) : magic{magic} {}
 };
 
-#endif //GENSIG_MACHO_H
+#endif //SIGTOOL_MACHO_H

@@ -17,13 +17,13 @@ signDarwinBinary() {
   local path="$1"
   local sigsize arch
 
-  arch=$(gensig --file "$path" show-arch)
+  arch=$(sigtool --file "$path" show-arch)
 
-  sigsize=$(gensig --file "$path" size)
+  sigsize=$(sigtool --file "$path" size)
   sigsize=$(( ((sigsize + 15) / 16) * 16 + 1024 ))
 
   codesign_allocate -i "$path" -a "$arch" "$sigsize" -o "$path.unsigned"
-  gensig --identifier "$(basename "$path")" --file "$path.unsigned" inject
+  sigtool --identifier "$(basename "$path")" --file "$path.unsigned" inject
   mv -vf "$path.unsigned" "$path"
 }
 ```
@@ -31,8 +31,8 @@ signDarwinBinary() {
 ## Usage
 
 ```
-gensig
-Usage: ./cmake-build-debug/gensig [OPTIONS] SUBCOMMAND
+sigtool
+Usage: sigtool [OPTIONS] SUBCOMMAND
 
 Options:
   -h,--help                   Print this help message and exit

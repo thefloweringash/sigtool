@@ -43,13 +43,13 @@ signDarwinBinary() {
   tempfile=$(mktemp -p "$(dirname "$path")" "$(basename "$path").XXXXXX")
   identifier=${global_identifier-$(basename "$path")}
 
-  arch=$(gensig --file "$path" show-arch)
+  arch=$(sigtool --file "$path" show-arch)
 
-  sigsize=$(gensig --file "$path" size)
+  sigsize=$(sigtool --file "$path" size)
   sigsize=$(( ((sigsize + 15) / 16) * 16 + 1024 ))
 
   "$allocate" -i "$path" -a "$arch" "$sigsize" -o "$tempfile"
-  gensig --identifier "$identifier" --file "$tempfile" inject
+  sigtool --identifier "$identifier" --file "$tempfile" inject
   mv -f "$tempfile" "$path"
 }
 
