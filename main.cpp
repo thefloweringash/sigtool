@@ -1,3 +1,4 @@
+#include <cstring>
 #include <iostream>
 #include <memory>
 #include "magic_numbers.h"
