@@ -185,7 +185,7 @@ blobIndex = Struct(
         CSSlot.CSSLOT_CODEDIRECTORY.name: codeDirectory,
         CSSlot.CSSLOT_REQUIREMENTS.name: requirements,
         CSSlot.CSSLOT_SIGNATURESLOT.name: signature,
-    }, default=Hex(Pointer(this._.pointer + this.offset + 8, Bytes(this.blob.length)))))
+    }, default=Hex(Pointer(this._.pointer + this.offset + 8, Bytes(this.blob.length - 8)))))
 
 )
 
