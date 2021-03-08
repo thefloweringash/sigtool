@@ -42,6 +42,14 @@ struct MachOHeader {
     uint32_t reserved; // only for 64-bit
 } __attribute__((packed));
 
+struct FatHeader {
+    uint32_t cpuType;
+    uint32_t cpuSubType;
+    uint32_t offset;
+    uint32_t size;
+    uint32_t align;
+};
+
 struct LoadCommand {
     uint32_t type;
     uint32_t cmdSize;
@@ -51,7 +59,7 @@ struct LoadCommand {
 
 struct Segment64LoadCommand : public LoadCommand {
     explicit Segment64LoadCommand(uint32_t type, uint32_t cmdSize)
-      : LoadCommand(type, cmdSize) {};
+            : LoadCommand(type, cmdSize) {};
 
     struct {
         char segname[16];
@@ -59,24 +67,29 @@ struct Segment64LoadCommand : public LoadCommand {
         uint64_t vmsize;
         uint64_t fileoff;
         uint64_t filesize;
-    } __attribute__((packed)) data {};
+    } __attribute__((packed)) data{};
 };
 
 struct CodeSignatureLoadCommand : public LoadCommand {
     explicit CodeSignatureLoadCommand(uint32_t type, uint32_t cmdSize)
-      : LoadCommand(type, cmdSize) {};
+            : LoadCommand(type, cmdSize) {};
 
     struct {
         uint32_t dataOff;
         uint32_t dataSize;
-    } __attribute__((packed)) data {};
+    } __attribute__((packed)) data{};
 };
 
+// A single architecture slice
 struct MachO {
-    explicit MachO(const std::string& filename);
-    MachOHeader header;
+    explicit MachO(std::ifstream &f, off_t offset, size_t size);
 
-    std::shared_ptr<Segment64LoadCommand> getSegment64LoadCommand(const std::string& name);
+    MachOHeader header;
+    off_t offset;
+    size_t size;
+
+    std::shared_ptr<Segment64LoadCommand> getSegment64LoadCommand(const std::string &name);
+
     std::shared_ptr<CodeSignatureLoadCommand> getCodeSignatureLoadCommand();
 
     bool requiresSignature();
@@ -85,8 +98,16 @@ private:
     std::vector<std::shared_ptr<LoadCommand>> loadCommands;
 };
 
+// All the architectures contained in a file. The file itself may be either a single architecture or universal.
+struct MachOList {
+    explicit MachOList(const std::string &f);
+
+    std::vector<std::shared_ptr<MachO>> machos;
+};
+
 struct NotAMachOFileException : public std::exception {
     uint32_t magic;
+
     explicit NotAMachOFileException(uint32_t magic) : magic{magic} {}
 };
 

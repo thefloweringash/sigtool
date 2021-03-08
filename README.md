@@ -2,31 +2,15 @@
 
 A minimal multicall binary providing helpers for working with embedded
 signatures in Mach-O files. Currently only supports embedded ad-hoc signatures
-for thin, 64-bit Mach-O files.
+for universal and thin 64-bit Mach-O files.
 
 ## Signing a binary or library
 
 This tool can generate and inject ad-hoc signatures, but uses
 `codesign_allocate` to make space for the signature. `codesign_allocate` is
-available in Apple's open source `cctools` project. 
+available in Apple's open source `cctools` project.
 
-An example shell driver:
-
-```sh
-signDarwinBinary() {
-  local path="$1"
-  local sigsize arch
-
-  arch=$(sigtool --file "$path" show-arch)
-
-  sigsize=$(sigtool --file "$path" size)
-  sigsize=$(( ((sigsize + 15) / 16) * 16 + 1024 ))
-
-  codesign_allocate -i "$path" -a "$arch" "$sigsize" -o "$path.unsigned"
-  sigtool --identifier "$(basename "$path")" --file "$path.unsigned" inject
-  mv -vf "$path.unsigned" "$path"
-}
-```
+For an example shell driver, see `codesign.sh`.
 
 ## Usage
 

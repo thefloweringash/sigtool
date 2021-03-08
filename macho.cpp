@@ -1,21 +1,60 @@
-//
-// Created by lorne on 10/4/20.
-//
-
 #include <cstring>
+#include <sys/stat.h>
 #include "macho.h"
 
 constexpr const uint32_t MH_MAGIC_64 = 0xFEEDFACF;
 constexpr const uint32_t MH_CIGAM_64 = 0xCFFAEDFE;
 
+constexpr const uint32_t MH_FAT_MAGIC = 0xCAFEBABE;
+constexpr const uint32_t MH_FAT_CIGAM = 0xBEBAFECA;
 
-MachO::MachO(const std::string &filename) : header{} {
+MachOList::MachOList(const std::string &filename) {
     std::ifstream f;
     f.open(filename, std::ifstream::in | std::ifstream::binary);
     if (f.fail()) {
         throw std::runtime_error(std::string{"opening input file: "} + strerror(errno));
     }
 
+    auto magic = Read::readBytes<uint32_t>(f);
+
+    if (magic != MH_MAGIC_64 && magic != MH_CIGAM_64 && magic != MH_FAT_MAGIC && magic != MH_FAT_CIGAM) {
+        throw NotAMachOFileException{magic};
+    }
+
+    if (magic == MH_FAT_CIGAM) {
+        // Many files in one file
+        auto count = ReadBE::readUInt32(f);
+        for (int i = 0; i < count; i++) {
+            FatHeader fatHeader{};
+
+            fatHeader.cpuType = ReadBE::readUInt32(f);
+            fatHeader.cpuSubType = ReadBE::readUInt32(f);
+            fatHeader.offset = ReadBE::readUInt32(f);
+            fatHeader.size = ReadBE::readUInt32(f);
+            fatHeader.align = ReadBE::readUInt32(f);
+
+            auto preserve = f.tellg();
+            f.seekg(fatHeader.offset);
+            machos.push_back(std::make_shared<MachO>(f, fatHeader.offset, fatHeader.size));
+            f.seekg(preserve);
+        }
+    } else if (magic == MH_MAGIC_64) {
+        // Single file
+        f.seekg(0);
+        struct stat targetFileStat{};
+        if (stat(filename.c_str(), &targetFileStat) != 0) {
+            throw std::runtime_error{std::string{"Stat of "} + filename + " failed: " + strerror(errno)};
+        }
+
+        machos.push_back(std::make_shared<MachO>(f, 0, targetFileStat.st_size));
+    } else {
+        throw std::runtime_error{
+                std::string{"Unexpected magic parsing macho file: "} + std::to_string(magic)};
+    }
+
+}
+
+MachO::MachO(std::ifstream &f, off_t offset, size_t size) : header{}, offset{offset}, size{size} {
     auto magic = Read::readBytes<uint32_t>(f);
 
     if (magic != MH_MAGIC_64 && magic != MH_CIGAM_64) {
@@ -62,8 +101,8 @@ MachO::MachO(const std::string &filename) : header{} {
     }
 }
 
-std::shared_ptr<Segment64LoadCommand> MachO::getSegment64LoadCommand(const std::string& name) {
-    for (auto& lc : loadCommands) {
+std::shared_ptr<Segment64LoadCommand> MachO::getSegment64LoadCommand(const std::string &name) {
+    for (const auto &lc : loadCommands) {
         if (lc->type != LC_SEGMENT_64) {
             continue;
         }
@@ -80,7 +119,7 @@ std::shared_ptr<Segment64LoadCommand> MachO::getSegment64LoadCommand(const std::
 }
 
 std::shared_ptr<CodeSignatureLoadCommand> MachO::getCodeSignatureLoadCommand() {
-    for (auto& lc : loadCommands) {
+    for (const auto &lc : loadCommands) {
         if (lc->type != LC_CODE_SIGNATURE) {
             continue;
         }

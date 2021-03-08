@@ -38,6 +38,7 @@ shift $((OPTIND-1))
 signDarwinBinary() {
   local path="$1"
   local sigsize arch identifier tempfile
+  local -a allocate_archs=()
 
   # This only supports mktemp for coreutils
   tempfile=$(mktemp -p "$(dirname "$path")" "$(basename "$path").XXXXXX")
@@ -45,10 +46,12 @@ signDarwinBinary() {
 
   arch=$(sigtool --file "$path" show-arch)
 
-  sigsize=$(sigtool --file "$path" size)
-  sigsize=$(( ((sigsize + 15) / 16) * 16 + 1024 ))
+  while read -r arch sigsize; do
+    sigsize=$(( ((sigsize + 15) / 16) * 16 + 1024 ))
+    allocate_archs+=(-a "$arch" "$sigsize")
+  done < <(sigtool --file "$path" size)
 
-  "$allocate" -i "$path" -a "$arch" "$sigsize" -o "$tempfile"
+  "$allocate" -i "$path" "${allocate_archs[@]}" -o "$tempfile"
   sigtool --identifier "$identifier" --file "$tempfile" inject
   mv -f "$tempfile" "$path"
 }
@@ -58,5 +61,5 @@ if [ "${verbose-}" ]; then
 fi
 
 for f in "$@"; do
-  signDarwinBinary "$1"
+  signDarwinBinary "$f"
 done
