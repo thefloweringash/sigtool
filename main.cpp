@@ -9,10 +9,11 @@ int main(int argc, char **argv) {
     CLI::App app{"sigtool"};
     app.require_subcommand();
 
-    std::string file, identifier;
+    std::string file, identifier, entitlements;
     app.add_option("-f,--file", file, "Mach-O target file")
             ->required();
     app.add_option("-i,--identifier", identifier, "File identifier");
+    app.add_option("-e,--entitlements", entitlements, "Entitlements plist");
 
     app.add_subcommand("check-requires-signature",
                        "Determine if this is a macho file that must be signed");
@@ -28,18 +29,22 @@ int main(int argc, char **argv) {
 
     if (app.got_subcommand("check-requires-signature")) {
         return Commands::checkRequiresSignature(file);
-    }
-    else if (app.got_subcommand("show-arch")) {
+    } else if (app.got_subcommand("show-arch")) {
         return Commands::showArch(file);
     }
-    else if (app.got_subcommand("size")) {
-        return Commands::showSize(file, identifier);
-    }
-    else if (app.got_subcommand("generate")) {
-        return Commands::generate(file, identifier);
-    }
-    else if (app.got_subcommand("inject")) {
-        return Commands::inject(file, identifier);
+
+    Commands::SignOptions options{
+            .filename = file,
+            .identifier = identifier,
+            .entitlements = entitlements,
+    };
+
+    if (app.got_subcommand("size")) {
+        return Commands::showSize(options);
+    } else if (app.got_subcommand("generate")) {
+        return Commands::generate(options);
+    } else if (app.got_subcommand("inject")) {
+        return Commands::inject(options);
     }
 
     return 0;

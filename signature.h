@@ -70,13 +70,41 @@ struct CodeDirectory : public Blob {
     std::string identifier;
     std::vector<Hash> codeHashes;
 private:
-    Hash specialHashes[5]{};
+    Hash specialHashes[7]{};
 };
 
 // Only empty requirements supported
 struct Requirements : public Blob {
     CSSlot slotType() override {
         return CSSLOT_REQUIREMENTS;
+    }
+
+    void emit(std::ostream &os) override;
+    size_t length() override;
+};
+
+struct Entitlements : public Blob {
+    std::string entitlements;
+
+    explicit Entitlements(std::string entitlements)
+            : entitlements{std::move(entitlements)} {}
+
+    CSSlot slotType() override {
+        return CSSLOT_ENTITLEMENTS;
+    }
+
+    void emit(std::ostream &os) override;
+    size_t length() override;
+};
+
+struct EntitlementsDER : public Blob {
+    std::string entitlements;
+
+    explicit EntitlementsDER(std::string entitlements)
+            : entitlements{std::move(entitlements)} {}
+
+    CSSlot slotType() override {
+        return CSSLOT_ENTITLEMENTS_DER;
     }
 
     void emit(std::ostream &os) override;

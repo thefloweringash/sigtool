@@ -2,7 +2,7 @@
 
 PKG_CONFIG ?= pkg-config
 
-SRCS = main.cpp hash.cpp macho.cpp signature.cpp commands.cpp
+SRCS = main.cpp hash.cpp macho.cpp signature.cpp commands.cpp der.cpp
 OBJS := $(SRCS:.cpp=.o)
 
 CPPFLAGS := -I vendor $(shell $(PKG_CONFIG) --cflags openssl)

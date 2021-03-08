@@ -8,8 +8,32 @@
 #include "commands.h"
 #include "macho.h"
 #include "signature.h"
+#include "der.h"
 
 constexpr const unsigned int pageSize = 4096;
+
+static std::string readFile(const std::string &filename) {
+    std::ifstream in{filename, std::ifstream::in | std::ifstream::binary};
+    if (!in.is_open()) {
+        throw std::runtime_error{"Failed opening file for read: '"
+                                 + filename + "' :" + strerror(errno)};
+    }
+
+    std::string str;
+
+    in.seekg(0, std::ifstream::end);
+    str.resize(in.tellg());
+    in.seekg(0, std::ifstream::beg);
+    in.read(&str[0], str.size());
+
+    return str;
+}
+
+static Hash hashBlob(const std::shared_ptr<Blob>& blob) {
+    std::basic_ostringstream<char> buf;
+    blob->emit(buf);
+    return Hash{buf.str()};
+}
 
 std::string cpuTypeName(uint32_t cpuType) {
     switch (cpuType) {
@@ -46,8 +70,7 @@ int Commands::showArch(const std::string &file) {
 }
 
 static SuperBlob signMachO(
-        const std::string &file,
-        const std::string &identifier,
+        const Commands::SignOptions& options,
         const std::shared_ptr<MachO> &target
 ) {
     SuperBlob sb{};
@@ -55,7 +78,7 @@ static SuperBlob signMachO(
     // blob 1: code directory
     auto codeDirectory = std::make_shared<CodeDirectory>();
 
-    codeDirectory->identifier = identifier.empty() ? file : identifier;
+    codeDirectory->identifier = options.identifier.empty() ? options.filename : options.identifier;
     codeDirectory->setPageSize(pageSize);
 
     // TOOD: is this sane?
@@ -78,7 +101,7 @@ static SuperBlob signMachO(
     }
 
     std::ifstream machoFileRaw;
-    machoFileRaw.open(file, std::ifstream::in | std::ifstream::binary);
+    machoFileRaw.open(options.filename, std::ifstream::in | std::ifstream::binary);
     machoFileRaw.seekg(target->offset);
 
     if (machoFileRaw.fail()) {
@@ -115,33 +138,46 @@ static SuperBlob signMachO(
 
     // blob 2: requirements index with 0 entries
     auto requirements = std::make_shared<Requirements>();
-    std::basic_ostringstream<char> requirementsBuf;
-    requirements->emit(requirementsBuf);
-    Hash requirementsHash{requirementsBuf.str()};
-    codeDirectory->setSpecialHash(2, requirementsHash);
+    codeDirectory->setSpecialHash(requirements->slotType(), hashBlob(requirements));
     sb.blobs.push_back(requirements);
 
-    // blob 3: empty signature slot
+    // optional blob: entitlements
+    if (!options.entitlements.empty()) {
+        auto entitlements = std::make_shared<Entitlements>(readFile(options.entitlements));
+        codeDirectory->setSpecialHash(entitlements->slotType(), hashBlob(entitlements));
+        sb.blobs.push_back(entitlements);
+
+        // TODO: BER formatted entitlements
+        /*
+        DERMap m{};
+        m.setBoolean("com.apple.security.hypervisor", true);
+        auto entitlementsDer = std::make_shared<EntitlementsDER>(m.toDER());
+        codeDirectory->setSpecialHash(entitlementsDer->slotType(), hashBlob(entitlementsDer));
+        sb.blobs.push_back(entitlementsDer);
+        */
+    }
+
+    // blob: empty signature slot
     sb.blobs.emplace_back(std::make_shared<Signature>());
 
     return sb;
 }
 
 
-int Commands::showSize(const std::string &file, const std::string &identifier) {
-    MachOList list{file};
+int Commands::showSize(const SignOptions& options) {
+    MachOList list{options.filename};
     for (const auto &macho : list.machos) {
-        auto sb = signMachO(file, identifier, macho);
+        auto sb = signMachO(options, macho);
         std::cout << cpuTypeName(macho->header.cpuType) << " " << sb.length() << std::endl;
     }
 
     return 0;
 }
 
-int Commands::generate(const std::string &file, const std::string &identifier) {
-    MachOList list{file};
+int Commands::generate(const SignOptions& options) {
+    MachOList list{options.filename};
     for (const auto &macho : list.machos) {
-        auto sb = signMachO(file, identifier, macho);
+        auto sb = signMachO(options, macho);
         // TODO: packing them all together is not helpful, but this is still usable
         // for the thin case.
         sb.emit(std::cout);
@@ -150,10 +186,10 @@ int Commands::generate(const std::string &file, const std::string &identifier) {
     return 0;
 }
 
-int Commands::inject(const std::string &file, const std::string &identifier) {
-    MachOList list{file};
+int Commands::inject(const SignOptions& options) {
+    MachOList list{options.filename};
     for (const auto &macho : list.machos) {
-        auto sb = signMachO(file, identifier, macho);
+        auto sb = signMachO(options, macho);
 
         auto codeSignature = macho->getCodeSignatureLoadCommand();
 
@@ -171,7 +207,7 @@ int Commands::inject(const std::string &file, const std::string &identifier) {
         }
 
         std::ofstream machoFileWrite;
-        machoFileWrite.open(file, std::ofstream::in | std::ofstream::out | std::ofstream::binary);
+        machoFileWrite.open(options.filename, std::ofstream::in | std::ofstream::out | std::ofstream::binary);
         if (machoFileWrite.fail()) {
             throw std::runtime_error(std::string{"opening macho file: "} + strerror(errno));
         }
