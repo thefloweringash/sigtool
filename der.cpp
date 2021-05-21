@@ -25,6 +25,8 @@ namespace {
         ASN1_STRING *s = ASN1_STRING_new();
         ASN1_STRING_set(s, der, -1);
 
+        free(der);
+
         return newType(V_ASN1_SEQUENCE, s);
     }
 

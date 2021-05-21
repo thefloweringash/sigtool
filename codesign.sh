@@ -44,8 +44,6 @@ signDarwinBinary() {
   tempfile=$(mktemp -p "$(dirname "$path")" "$(basename "$path").XXXXXX")
   identifier=${global_identifier-$(basename "$path")}
 
-  arch=$(sigtool --file "$path" show-arch)
-
   while read -r arch sigsize; do
     sigsize=$(( ((sigsize + 15) / 16) * 16 + 1024 ))
     allocate_archs+=(-a "$arch" "$sigsize")
