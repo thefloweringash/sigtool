@@ -7,10 +7,16 @@ ENDIF()
 
 find_package(OpenSSL REQUIRED)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
-add_executable(sigtool main.cpp macho.cpp signature.cpp hash.cpp commands.cpp der.cpp)
-target_link_libraries(sigtool PRIVATE OpenSSL::Crypto)
-target_include_directories(sigtool PRIVATE vendor)
+add_library(common OBJECT macho.cpp signature.cpp hash.cpp commands.cpp der.cpp)
+target_include_directories(common PUBLIC vendor)
+target_link_libraries(common PRIVATE OpenSSL::Crypto)
 
-install(TARGETS sigtool)
+add_executable(sigtool main.cpp)
+target_link_libraries(sigtool PRIVATE common)
+
+add_executable(codesign codesign.cpp)
+target_link_libraries(codesign PRIVATE common)
+
+install(TARGETS sigtool codesign)

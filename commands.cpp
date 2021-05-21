@@ -1,14 +1,21 @@
 #include <algorithm>
 #include <cstring>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <sstream>
 #include <sys/stat.h>
+#include <spawn.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "commands.h"
 #include "macho.h"
 #include "signature.h"
 #include "der.h"
+
+extern char **environ;
 
 constexpr const unsigned int pageSize = 4096;
 
@@ -29,7 +36,7 @@ static std::string readFile(const std::string &filename) {
     return str;
 }
 
-static Hash hashBlob(const std::shared_ptr<Blob>& blob) {
+static Hash hashBlob(const std::shared_ptr<Blob> &blob) {
     std::basic_ostringstream<char> buf;
     blob->emit(buf);
     return Hash{buf.str()};
@@ -49,7 +56,7 @@ std::string cpuTypeName(uint32_t cpuType) {
 int Commands::checkRequiresSignature(const std::string &file) {
     try {
         MachOList test{file};
-        bool anyRequires = std::any_of(test.machos.begin(), test.machos.end(), [](const std::shared_ptr<MachO>& h) {
+        bool anyRequires = std::any_of(test.machos.begin(), test.machos.end(), [](const std::shared_ptr<MachO> &h) {
             return h->requiresSignature();
         });
         return anyRequires ? 0 : 1;
@@ -70,7 +77,7 @@ int Commands::showArch(const std::string &file) {
 }
 
 static SuperBlob signMachO(
-        const Commands::SignOptions& options,
+        const Commands::SignOptions &options,
         const std::shared_ptr<MachO> &target
 ) {
     SuperBlob sb{};
@@ -164,7 +171,7 @@ static SuperBlob signMachO(
 }
 
 
-int Commands::showSize(const SignOptions& options) {
+int Commands::showSize(const SignOptions &options) {
     MachOList list{options.filename};
     for (const auto &macho : list.machos) {
         auto sb = signMachO(options, macho);
@@ -174,7 +181,7 @@ int Commands::showSize(const SignOptions& options) {
     return 0;
 }
 
-int Commands::generate(const SignOptions& options) {
+int Commands::generate(const SignOptions &options) {
     MachOList list{options.filename};
     for (const auto &macho : list.machos) {
         auto sb = signMachO(options, macho);
@@ -186,7 +193,7 @@ int Commands::generate(const SignOptions& options) {
     return 0;
 }
 
-int Commands::inject(const SignOptions& options) {
+int Commands::inject(const SignOptions &options) {
     MachOList list{options.filename};
     for (const auto &macho : list.machos) {
         auto sb = signMachO(options, macho);
@@ -220,3 +227,111 @@ int Commands::inject(const SignOptions& options) {
     return 0;
 }
 
+static char **toSpawnArgs(const std::vector<std::string> &args) {
+    char **spawnArgs = reinterpret_cast<char **>(
+            calloc(args.size() + 1, sizeof(char *)));
+    for (int i = 0; i < args.size(); i++) {
+        spawnArgs[i] = strdup(args[i].c_str());
+    }
+    spawnArgs[args.size()] = nullptr;
+    return spawnArgs;
+}
+
+static void freeArgs(char **spawnArgs, std::vector<std::string>::size_type size) {
+    for (int i = 0; i < size; i++) {
+        free(spawnArgs[i]);
+    }
+    free(spawnArgs);
+}
+
+int Commands::codesign(const CodesignOptions &options, const std::string &filename) {
+    std::string identifier = options.identifier;
+    if (identifier.empty()) {
+        identifier = std::filesystem::path(filename).filename();
+    }
+    // Parse and discovery arguments
+    MachOList list{filename};
+    std::vector<std::string> arguments;
+
+    arguments.emplace_back("codesign_allocate");
+    arguments.emplace_back("-i");
+    arguments.emplace_back(filename);
+
+
+    for (const auto &macho : list.machos) {
+        auto sb = signMachO(SignOptions{
+                .filename = filename,
+                .identifier = identifier,
+                .entitlements = options.entitlements,
+        }, macho);
+
+        arguments.emplace_back("-a");
+        arguments.push_back(cpuTypeName(macho->header.cpuType));
+
+        size_t len = sb.length();
+        len = ((len + 0xf) & ~0xf) + 1024; // align and pad
+        arguments.push_back(std::to_string(len));
+    }
+
+    // Make temporary name
+    char *tempfileName = strdup((filename + "XXXXXX").c_str());
+    int tempfile = mkstemp(tempfileName);
+
+    // Preserve mode
+    struct stat sourceFileStat{};
+    if (stat(filename.c_str(), &sourceFileStat) != 0) {
+        throw std::runtime_error{std::string{"stat of "} + filename + " failed: " + strerror(errno)};
+    }
+
+    if (fchmod(tempfile, sourceFileStat.st_mode) != 0) {
+        throw std::runtime_error{"chmod temporary file"};
+    }
+
+    std::string tempfileFdPath = std::string{"/dev/fd/"} + std::to_string(tempfile);
+    arguments.emplace_back("-o");
+    arguments.emplace_back(tempfileFdPath);
+
+    // codesign_allocate
+    pid_t pid;
+    char **spawnArgs = toSpawnArgs(arguments);
+
+    const char *codesign_allocate = getenv("CODESIGN_ALLOCATE");
+    if (!codesign_allocate) {
+        codesign_allocate = "codesign_allocate";
+    }
+
+    int spawn_result;
+    if ((spawn_result = posix_spawnp(&pid, codesign_allocate, nullptr, nullptr, spawnArgs, environ)) != 0) {
+        throw std::runtime_error{std::string{"Failed to spawn codesign_allocate: "} + strerror(spawn_result)};
+    };
+
+    int codesign_status;
+    if (waitpid(pid, &codesign_status, 0) <= 0) {
+        throw std::runtime_error{
+                std::string{"codesign waitpid failed: "} + strerror(errno)
+        };
+    }
+    freeArgs(spawnArgs, arguments.size());
+
+    if (!WIFEXITED(codesign_status) || WEXITSTATUS(codesign_status) != 0) {
+        throw std::runtime_error{std::string{"codesign_failed: "} + std::to_string(WEXITSTATUS(codesign_status))};
+    }
+
+    if (close(tempfile) != 0) {
+        throw std::runtime_error{std::string{"close: "} + strerror(tempfile)};
+    }
+
+    // inject
+    Commands::inject(SignOptions{
+            .filename = tempfileName,
+            .identifier = identifier,
+            .entitlements = options.entitlements,
+    });
+
+    // rename temp file to output
+    if (rename(tempfileName, filename.c_str()) != 0) {
+        throw std::runtime_error{"rename failed"};
+    }
+
+    return 0;
+}
