@@ -13,6 +13,7 @@ namespace Commands {
     struct CodesignOptions {
         std::string identifier;
         std::string entitlements;
+        bool force;
     };
 
     int checkRequiresSignature(const std::string &file);
