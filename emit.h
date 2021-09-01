@@ -7,6 +7,8 @@
 #include <arpa/inet.h>
 #include <cmath>
 
+namespace SigTool {
+
 static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "host is little endian");
 
 class Emit {
@@ -61,6 +63,7 @@ public:
         return Read::readBytes<uint32_t>(is);
     }
 };
-
+};
 
 #endif //SIGTOOL_EMIT_H
+

@@ -20,14 +20,14 @@ int main(int argc, char **argv) {
                 std::string{"Only ad-hoc identities supported, requested: '"} + identity + "'"};
     }
 
-    Commands::CodesignOptions options{
+    SigTool::Commands::CodesignOptions options{
             .identifier = identifier,
             .entitlements = entitlements,
             .force = force,
     };
 
     for (const auto &f : files) {
-        Commands::codesign(options, f);
+	SigTool::Commands::codesign(options, f);
     }
 
     return 0;

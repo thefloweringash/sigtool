@@ -19,4 +19,20 @@ target_link_libraries(sigtool PRIVATE common)
 add_executable(codesign codesign.cpp)
 target_link_libraries(codesign PRIVATE common)
 
+add_library(libsigtool)
+target_link_libraries(libsigtool PRIVATE common)
+set_property(TARGET libsigtool PROPERTY OUTPUT_NAME sigtool)
+
 install(TARGETS sigtool codesign)
+
+install(
+  FILES
+    commands.h
+    der.h
+    emit.h
+    hash.h
+    macho.h
+    signature.h
+  DESTINATION
+    include/sigtool
+)

@@ -10,6 +10,8 @@
 #include "magic_numbers.h"
 #include "hash.h"
 
+namespace SigTool {
+
 struct Emittable {
     virtual void emit(std::ostream& os) = 0;
     virtual size_t length() = 0;
@@ -105,6 +107,7 @@ struct Signature : public Blob {
 
     void emit(std::ostream &os) override;
     size_t length() override;
+};
 };
 
 #endif //SIGTOOL_SIGNATURE_H

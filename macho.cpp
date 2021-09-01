@@ -2,6 +2,8 @@
 #include <sys/stat.h>
 #include "macho.h"
 
+namespace SigTool {
+
 constexpr const uint32_t MH_MAGIC_64 = 0xFEEDFACF;
 constexpr const uint32_t MH_CIGAM_64 = 0xCFFAEDFE;
 
@@ -136,3 +138,5 @@ bool MachO::requiresSignature() {
             header.filetype == MH_KEXT_BUNDLE || header.filetype == MH_PRELOAD
     );
 }
+
+};
