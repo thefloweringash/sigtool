@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
     std::vector<std::string> files;
     app.add_option("-s", identity, "Code signing identity")->required();
     app.add_option("-i,--identifier", identifier, "File identifier");
-    app.add_flag("-f", force, "Replace any existing signatures");
+    app.add_flag("-f,--force", force, "Replace any existing signatures");
     app.add_option("--entitlements", entitlements, "Entitlements plist");
     app.add_option("files", files, "Files to sign");
 
