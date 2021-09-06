@@ -41,12 +41,16 @@ static Hash hashBlob(const std::shared_ptr<Blob> &blob) {
     return Hash{buf.str()};
 }
 
-std::string cpuTypeName(uint32_t cpuType) {
-    switch (cpuType) {
+std::string cpuTypeName(uint32_t cpuType, uint32_t cpuSubType) {
+    switch (cpuType | cpuSubType) {
         case CPUTYPE_X86_64:
             return "x86_64";
+        case CPUTYPE_X86_64H:
+            return "x86_64h";
         case CPUTYPE_ARM64:
             return "arm64";
+        case CPUTYPE_ARM64E:
+            return "arm64e";
         default:
             throw std::runtime_error{std::string{"Unsupported cpu type"} + std::to_string(cpuType)};
     }
@@ -69,7 +73,7 @@ int Commands::showArch(const std::string &file) {
     MachOList test{file};
 
     for (const auto &macho : test.machos) {
-        std::cout << cpuTypeName(macho->header.cpuType) << std::endl;
+        std::cout << cpuTypeName(macho->header.cpuType, macho->header.cpuSubType) << std::endl;
     }
 
     return 0;
@@ -165,7 +169,7 @@ int Commands::showSize(const SignOptions &options) {
     MachOList list{options.filename};
     for (const auto &macho : list.machos) {
         auto sb = signMachO(options, macho);
-        std::cout << cpuTypeName(macho->header.cpuType) << " " << sb.length() << std::endl;
+        std::cout << cpuTypeName(macho->header.cpuType, macho->header.cpuSubType) << " " << sb.length() << std::endl;
     }
 
     return 0;
@@ -198,7 +202,7 @@ int Commands::inject(const SignOptions &options) {
             throw std::runtime_error{
                     std::string{"allocated size too small: need "}
                     + std::to_string(sb.length())
-                    + std::string{"but have "}
+                    + std::string{" but have "}
                     + std::to_string(codeSignature->data.dataSize)
             };
         }
@@ -259,8 +263,10 @@ int Commands::codesign(const CodesignOptions &options, const std::string &filena
                 .entitlements = options.entitlements,
         }, macho);
 
-        arguments.emplace_back("-a");
-        arguments.push_back(cpuTypeName(macho->header.cpuType));
+
+        arguments.emplace_back("-A");
+        arguments.emplace_back(std::to_string(macho->header.cpuType));
+        arguments.emplace_back(std::to_string(macho->header.cpuSubType));
 
         size_t len = sb.length();
         len = ((len + 0xf) & ~0xf) + 1024; // align and pad
