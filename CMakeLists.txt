@@ -24,7 +24,7 @@ add_library(libsigtool)
 target_link_libraries(libsigtool PRIVATE common)
 set_property(TARGET libsigtool PROPERTY OUTPUT_NAME sigtool)
 
-install(TARGETS sigtool codesign)
+install(TARGETS sigtool codesign libsigtool)
 
 install(
   FILES
