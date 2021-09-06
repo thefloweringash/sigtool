@@ -9,6 +9,16 @@
 #include <iostream>
 #include "emit.h"
 
+// This project intends to be standalone and portable, however it may
+// also be compiled on platforms where these constants are already
+// defined. In this case, we make sure to remove the ambient
+// definitions for consistency. The only known overlapping symbol is
+// CPU_SUBTYPE_ARM64E.
+
+#ifdef CPU_SUBTYPE_ARM64E
+#undef CPU_SUBTYPE_ARM64E
+#endif
+
 enum {
     MH_EXECUTE = 0x2,
     MH_PRELOAD = 0x5,
