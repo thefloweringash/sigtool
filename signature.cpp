@@ -73,7 +73,7 @@ void CodeDirectory::emit(std::ostream& os)  {
 }
 
 void CodeDirectory::setSpecialHash(int index, const Hash& value) {
-    // index is in the range of (-1 to -5), with -1 being the first, etc
+    // index is in the range of (1 to 5), with 1 being the first, etc
     // for convenience, map that to a regular (0..4) array
     unsigned int storage = (unsigned int)index - 1;
     data.nSpecialSlots = std::max(data.nSpecialSlots, storage + 1);
@@ -148,4 +148,14 @@ void Signature::emit(std::ostream &os) {
 
 size_t Signature::length() {
     return 2 * sizeof(uint32_t);
+}
+
+void Entitlements::emit(std::ostream &os) {
+    EmitBE::writeUInt32(os, CSMAGIC_EMBEDDED_ENTITLEMENTS);
+    EmitBE::writeUInt32(os, length());
+    os << entitlements;
+}
+
+size_t Entitlements::length() {
+    return entitlements.length() + 8;
 }
