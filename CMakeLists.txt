@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.17)
 project(sigtool)
 
+option(BUILD_SHARED_LIBS "Build libsigtool as a shared library" ON)
+
 IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(CMAKE_CXX_FLAGS "-g")
 ENDIF()
