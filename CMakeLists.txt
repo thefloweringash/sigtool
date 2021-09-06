@@ -29,7 +29,6 @@ install(TARGETS sigtool codesign)
 install(
   FILES
     commands.h
-    der.h
     emit.h
     hash.h
     macho.h
