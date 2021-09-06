@@ -274,8 +274,8 @@ int Commands::codesign(const CodesignOptions &options, const std::string &filena
     }
 
     // Make temporary name
-    char *tempfileName = strdup((filename + "XXXXXX").c_str());
-    int tempfile = mkstemp(tempfileName);
+    std::unique_ptr<char, decltype(&std::free)> tempfileName { strdup((filename + "XXXXXX").c_str()), std::free };
+    int tempfile = mkstemp(tempfileName.get());
 
     // Preserve mode
     struct stat sourceFileStat{};
@@ -287,9 +287,8 @@ int Commands::codesign(const CodesignOptions &options, const std::string &filena
         throw std::runtime_error{"chmod temporary file"};
     }
 
-    std::string tempfileFdPath = std::string{"/dev/fd/"} + std::to_string(tempfile);
     arguments.emplace_back("-o");
-    arguments.emplace_back(tempfileFdPath);
+    arguments.emplace_back(std::string(tempfileName.get()));
 
     // codesign_allocate
     pid_t pid;
@@ -306,11 +305,16 @@ int Commands::codesign(const CodesignOptions &options, const std::string &filena
     };
 
     int codesign_status;
-    if (waitpid(pid, &codesign_status, 0) <= 0) {
+    pid_t waitpid_result;
+    do {
+        waitpid_result = waitpid(pid, &codesign_status, 0);
+    } while (waitpid_result == -1 && errno == EINTR);
+    if (waitpid_result == -1) {
         throw std::runtime_error{
                 std::string{"codesign waitpid failed: "} + strerror(errno)
         };
     }
+
     freeArgs(spawnArgs, arguments.size());
 
     if (!WIFEXITED(codesign_status) || WEXITSTATUS(codesign_status) != 0) {
@@ -323,13 +327,13 @@ int Commands::codesign(const CodesignOptions &options, const std::string &filena
 
     // inject
     Commands::inject(SignOptions{
-            .filename = tempfileName,
+            .filename = std::string(tempfileName.get()),
             .identifier = identifier,
             .entitlements = options.entitlements,
     });
 
     // rename temp file to output
-    if (rename(tempfileName, filename.c_str()) != 0) {
+    if (rename(tempfileName.get(), filename.c_str()) != 0) {
         throw std::runtime_error{"rename failed"};
     }
 
