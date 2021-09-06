@@ -9,7 +9,7 @@ find_package(OpenSSL REQUIRED)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_library(common OBJECT macho.cpp signature.cpp hash.cpp commands.cpp)
+add_library(common OBJECT macho.cpp signature.cpp hash.cpp commands.cpp der.cpp)
 target_include_directories(common PUBLIC vendor)
 target_link_libraries(common PRIVATE OpenSSL::Crypto)
 

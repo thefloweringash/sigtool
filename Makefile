@@ -3,7 +3,7 @@
 PKG_CONFIG ?= pkg-config
 CXXFLAGS = -std=c++17
 
-COMMON_SRCS = hash.cpp macho.cpp signature.cpp commands.cpp
+COMMON_SRCS = hash.cpp macho.cpp signature.cpp commands.cpp der.cpp
 
 SIGTOOL_SRCS = main.cpp $(COMMON_SRCS)
 SIGTOOL_OBJS := $(SIGTOOL_SRCS:.cpp=.o)

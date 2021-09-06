@@ -13,6 +13,7 @@
 #include "commands.h"
 #include "macho.h"
 #include "signature.h"
+#include "der.h"
 
 extern char **environ;
 
@@ -152,6 +153,15 @@ static SuperBlob signMachO(
         auto entitlements = std::make_shared<Entitlements>(readFile(options.entitlements));
         codeDirectory->setSpecialHash(entitlements->slotType(), hashBlob(entitlements));
         sb.blobs.push_back(entitlements);
+
+        // TODO: BER formatted entitlements
+        /*
+        DERMap m{};
+        m.setBoolean("com.apple.security.hypervisor", true);
+        auto entitlementsDer = std::make_shared<EntitlementsDER>(m.toDER());
+        codeDirectory->setSpecialHash(entitlementsDer->slotType(), hashBlob(entitlementsDer));
+        sb.blobs.push_back(entitlementsDer);
+        */
     }
 
     // blob: empty signature slot
