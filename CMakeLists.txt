@@ -9,20 +9,16 @@ find_package(OpenSSL REQUIRED)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_library(common OBJECT macho.cpp signature.cpp hash.cpp commands.cpp)
-set_property(TARGET common PROPERTY POSITION_INDEPENDENT_CODE ON)
-target_include_directories(common PUBLIC vendor)
-target_link_libraries(common PRIVATE OpenSSL::Crypto)
+add_library(libsigtool macho.cpp signature.cpp hash.cpp commands.cpp)
+target_include_directories(libsigtool PUBLIC vendor)
+target_link_libraries(libsigtool PRIVATE OpenSSL::Crypto)
+set_property(TARGET libsigtool PROPERTY OUTPUT_NAME sigtool)
 
 add_executable(sigtool main.cpp)
-target_link_libraries(sigtool PRIVATE common)
+target_link_libraries(sigtool PRIVATE libsigtool)
 
 add_executable(codesign codesign.cpp)
-target_link_libraries(codesign PRIVATE common)
-
-add_library(libsigtool)
-target_link_libraries(libsigtool PRIVATE common)
-set_property(TARGET libsigtool PROPERTY OUTPUT_NAME sigtool)
+target_link_libraries(codesign PRIVATE libsigtool)
 
 install(TARGETS sigtool codesign libsigtool)
 
