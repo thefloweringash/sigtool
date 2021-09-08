@@ -1,6 +1,8 @@
 #ifndef SIGTOOL_MAGIC_NUMBERS_H
 #define SIGTOOL_MAGIC_NUMBERS_H
 
+namespace SigTool {
+
 enum {
     CS_ADHOC = 0x00000002,
 };
@@ -26,6 +28,7 @@ enum CSSlot {
     CSSLOT_REQUIREMENTS = 2,
     CSSLOT_ENTITLEMENTS = 5,
     CSSLOT_SIGNATURESLOT = 0x10000,
+};
 };
 
 #endif

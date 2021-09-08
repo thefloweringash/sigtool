@@ -5,6 +5,7 @@
 #include <string>
 #include "magic_numbers.h"
 
+namespace SigTool {
 struct SHA256Hash {
     static const int constexpr hashSize = 32;
     static const int constexpr hashType = CS_HASHTYPE_SHA256;
@@ -19,5 +20,6 @@ struct SHA256Hash {
 };
 
 using Hash = SHA256Hash;
+};
 
 #endif

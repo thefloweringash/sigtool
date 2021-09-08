@@ -1,4 +1,4 @@
-{ lib, stdenv, cmake, makeWrapper, openssl }:
+{ lib, stdenv, cmake, makeWrapper, openssl, static ? false }:
 
 stdenv.mkDerivation {
   name = "sigtool";
@@ -9,6 +9,10 @@ stdenv.mkDerivation {
   buildInputs = [ openssl ];
 
   installFlags = [ "PREFIX=$(out)" ];
+
+  cmakeFlags = lib.optionals static [
+    "-DBUILD_SHARED_LIBS=OFF"
+  ];
 
   postInstall = ''
     wrapProgram $out/bin/codesign \

@@ -16,6 +16,8 @@
 
 extern char **environ;
 
+namespace SigTool {
+
 constexpr const unsigned int pageSize = 4096;
 
 static std::string readFile(const std::string &filename) {
@@ -339,3 +341,4 @@ int Commands::codesign(const CodesignOptions &options, const std::string &filena
 
     return 0;
 }
+};
