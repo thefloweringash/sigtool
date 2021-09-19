@@ -1,8 +1,11 @@
 # sigtool
 
-A minimal multicall binary providing helpers for working with embedded
-signatures in Mach-O files. Currently only supports embedded ad-hoc signatures
-for universal and thin 64-bit Mach-O files.
+`sigtool` is minimal multicall binary providing helpers for working
+with embedded signatures in Mach-O files. Currently only supports
+embedded ad-hoc signatures for universal and thin 64-bit Mach-O files.
+
+A `codesign` interface is also provided, and is intended to be a
+drop-in replacement for upstream `codesign`.
 
 ## Signing a binary or library
 
@@ -10,9 +13,9 @@ This tool can generate and inject ad-hoc signatures, but uses
 `codesign_allocate` to make space for the signature. `codesign_allocate` is
 available in Apple's open source `cctools` project.
 
-For an example shell driver, see `codesign.sh`.
-
 ## Usage
+
+### sigtool
 
 ```
 sigtool
@@ -22,6 +25,7 @@ Options:
   -h,--help                   Print this help message and exit
   -f,--file TEXT REQUIRED     Mach-O target file
   -i,--identifier TEXT        File identifier
+  -e,--entitlements TEXT      Entitlements plist
 
 Subcommands:
   check-requires-signature    Determine if this is a macho file that must be signed
@@ -30,6 +34,24 @@ Subcommands:
   inject                      Generate and inject embedded signature
   show-arch                   Show architecture
 ```
+
+### codesign
+
+```
+codesign
+Usage: codesign [OPTIONS] [files...]
+
+Positionals:
+  files TEXT ...              Files to sign
+
+Options:
+  -h,--help                   Print this help message and exit
+  -s TEXT REQUIRED            Code signing identity
+  -i,--identifier TEXT        File identifier
+  -f,--force                  Replace any existing signatures
+  --entitlements TEXT         Entitlements plist
+```
+
 
 ## Example signature
 
