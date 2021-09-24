@@ -12,11 +12,15 @@
 // This project intends to be standalone and portable, however it may
 // also be compiled on platforms where these constants are already
 // defined. In this case, we make sure to remove the ambient
-// definitions for consistency. The only known overlapping symbol is
-// CPU_SUBTYPE_ARM64E.
+// definitions for consistency. The only known overlapping symbols are
+// CPU_SUBTYPE_ARM64E and CPU_SUBTYPE_MASK.
 
 #ifdef CPU_SUBTYPE_ARM64E
 #undef CPU_SUBTYPE_ARM64E
+#endif
+
+#ifdef CPU_SUBTYPE_MASK
+#undef CPU_SUBTYPE_MASK
 #endif
 
 namespace SigTool {
@@ -31,6 +35,7 @@ enum {
 };
 
 enum {
+    CPU_SUBTYPE_MASK = 0xff000000,
     CPU_SUBTYPE_ARM64E = 0x2,
     CPU_SUBTYPE_X86_64H = 0x8,
 };

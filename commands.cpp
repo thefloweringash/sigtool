@@ -282,7 +282,7 @@ int Commands::codesign(const CodesignOptions &options, const std::string &filena
 
         arguments.emplace_back("-A");
         arguments.emplace_back(std::to_string(macho->header.cpuType));
-        arguments.emplace_back(std::to_string(macho->header.cpuSubType));
+        arguments.emplace_back(std::to_string(macho->header.cpuSubType & ~CPU_SUBTYPE_MASK));
 
         size_t len = sb.length();
         len = ((len + 0xf) & ~0xf) + 1024; // align and pad
