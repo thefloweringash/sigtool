@@ -1,7 +1,7 @@
 # Minimal Makefile for bootstrapping without cmake
 
 PKG_CONFIG ?= pkg-config
-CXXFLAGS = -std=c++17
+CXXFLAGS = -std=c++11
 
 COMMON_SRCS = hash.cpp macho.cpp signature.cpp commands.cpp
 

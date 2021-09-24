@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <cstring>
-#include <filesystem>
 #include <memory>
 #include <string>
 #include <sstream>
@@ -240,10 +239,25 @@ static void freeArgs(char **spawnArgs, std::vector<std::string>::size_type size)
     free(spawnArgs);
 }
 
+static std::string inferIdentifier(const std::string& filename) {
+    // basename / basename_r are awkward to use. We don't need the exact
+    // meaning of basename.
+
+    const auto slash = filename.find_last_of('/');
+    if (slash == std::string::npos) {
+        return filename;
+    }
+    std::string basename = filename.substr(slash + 1);
+    if (basename.empty()) {
+        return filename;
+    }
+    return basename;
+}
+
 int Commands::codesign(const CodesignOptions &options, const std::string &filename) {
     std::string identifier = options.identifier;
     if (identifier.empty()) {
-        identifier = std::filesystem::path(filename).filename();
+        identifier = inferIdentifier(filename);
     }
     // Parse and discovery arguments
     MachOList list{filename};

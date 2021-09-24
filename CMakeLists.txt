@@ -9,7 +9,7 @@ ENDIF()
 
 find_package(OpenSSL REQUIRED)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 11)
 
 add_library(libsigtool macho.cpp signature.cpp hash.cpp commands.cpp)
 target_include_directories(libsigtool PUBLIC vendor)
