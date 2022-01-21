@@ -7,7 +7,7 @@ int main(int argc, char **argv) {
     std::string identity, identifier, entitlements;
     bool force = false;
     std::vector<std::string> files;
-    app.add_option("-s", identity, "Code signing identity")->required();
+    app.add_option("-s,--sign", identity, "Code signing identity")->required();
     app.add_option("-i,--identifier", identifier, "File identifier");
     app.add_flag("-f,--force", force, "Replace any existing signatures");
     app.add_option("--entitlements", entitlements, "Entitlements plist");
