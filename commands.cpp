@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstring>
+#include <functional>
 #include <memory>
 #include <string>
 #include <sstream>
@@ -254,40 +255,20 @@ static std::string inferIdentifier(const std::string& filename) {
     return basename;
 }
 
-int Commands::codesign(const CodesignOptions &options, const std::string &filename) {
-    std::string identifier = options.identifier;
-    if (identifier.empty()) {
-        identifier = inferIdentifier(filename);
-    }
-    // Parse and discovery arguments
-    MachOList list{filename};
-    std::vector<std::string> arguments;
+static void codesignAllocate(
+        const std::string &filename,
+        const std::vector<std::string> &extraArguments,
+        std::function<void(const std::string&)> withTempfile = [](const std::string&) {}) {
 
+    // Parse and discovery arguments
+    std::vector<std::string> arguments;
     arguments.emplace_back("codesign_allocate");
     arguments.emplace_back("-i");
     arguments.emplace_back(filename);
-
-
-    for (const auto &macho : list.machos) {
-        auto codeSignature = macho->getCodeSignatureLoadCommand();
-        if (!options.force && codeSignature) {
-            throw std::runtime_error{"file is already signed. pass -f to sign regardless."};
-        }
-        auto sb = signMachO(SignOptions{
-                .filename = filename,
-                .identifier = identifier,
-                .entitlements = options.entitlements,
-        }, macho);
-
-
-        arguments.emplace_back("-A");
-        arguments.emplace_back(std::to_string(macho->header.cpuType));
-        arguments.emplace_back(std::to_string(macho->header.cpuSubType & ~CPU_SUBTYPE_MASK));
-
-        size_t len = sb.length();
-        len = ((len + 0xf) & ~0xf) + 1024; // align and pad
-        arguments.push_back(std::to_string(len));
-    }
+    arguments.insert(
+            arguments.end(),
+            extraArguments.begin(),
+            extraArguments.end());
 
     // Make temporary name
     std::unique_ptr<char, decltype(&std::free)> tempfileName { strdup((filename + "XXXXXX").c_str()), std::free };
@@ -341,18 +322,71 @@ int Commands::codesign(const CodesignOptions &options, const std::string &filena
         throw std::runtime_error{std::string{"close: "} + strerror(tempfile)};
     }
 
-    // inject
-    Commands::inject(SignOptions{
-            .filename = std::string(tempfileName.get()),
-            .identifier = identifier,
-            .entitlements = options.entitlements,
-    });
+    withTempfile(tempfileName.get());
 
     // rename temp file to output
     if (rename(tempfileName.get(), filename.c_str()) != 0) {
         throw std::runtime_error{"rename failed"};
     }
+}
+
+int Commands::codesign(const CodesignOptions &options, const std::string &filename) {
+    std::string identifier = options.identifier;
+    if (identifier.empty()) {
+        identifier = inferIdentifier(filename);
+    }
+
+    MachOList list{filename};
+    std::vector<std::string> arguments;
+
+    for (const auto &macho : list.machos) {
+        auto codeSignature = macho->getCodeSignatureLoadCommand();
+        if (!options.force && codeSignature) {
+            throw std::runtime_error{"file is already signed. pass -f to sign regardless."};
+        }
+        auto sb = signMachO(SignOptions{
+                .filename = filename,
+                .identifier = identifier,
+                .entitlements = options.entitlements,
+        }, macho);
+
+
+        arguments.emplace_back("-A");
+        arguments.emplace_back(std::to_string(macho->header.cpuType));
+        arguments.emplace_back(std::to_string(macho->header.cpuSubType & ~CPU_SUBTYPE_MASK));
+
+        size_t len = sb.length();
+        len = ((len + 0xf) & ~0xf) + 1024; // align and pad
+        arguments.push_back(std::to_string(len));
+    }
+
+    codesignAllocate(
+            filename,
+            arguments,
+            [&] (const std::string &tempfileName) {
+                // inject
+                Commands::inject(SignOptions{
+                    .filename = tempfileName,
+                    .identifier = identifier,
+                    .entitlements = options.entitlements,
+                });
+            });
 
     return 0;
+}
+
+bool Commands::verifySignature(const std::string &filename) {
+    MachOList list{filename};
+    for (const auto &macho : list.machos) {
+        if (macho->getCodeSignatureLoadCommand()) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void Commands::removeSignature(const std::string &filename) {
+    codesignAllocate(filename, { "-r" });
 }
 };
